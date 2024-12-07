@@ -59,6 +59,12 @@ public class ProjectService {
         return projectRepository.findById(projectId);
     }
 
+    public Optional<Project> findProjectByName(String name) {
+        return projectRepository.findByName(name);
+    }
+
+
+
 
     public List<ProjectStatisticsDTO> getAllProjectsStatistics() {
         List<Project> projects = projectRepository.findAll(); // Получаем все проекты

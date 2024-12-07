@@ -3,6 +3,7 @@ package org.example.tasktrackerserver.controllers;
 import org.example.tasktrackerserver.dtos.TaskDTO;
 import org.example.tasktrackerserver.models.Task;
 import org.example.tasktrackerserver.models.User;
+import org.example.tasktrackerserver.services.ProjectService;
 import org.example.tasktrackerserver.services.TaskService;
 import org.example.tasktrackerserver.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +23,8 @@ import java.util.Optional;
 public class TaskController {
     @Autowired
     private TaskService taskService;
-
+    @Autowired
+    private ProjectService projectService;
     @Autowired
     private UserService userService;
 
@@ -30,21 +32,35 @@ public class TaskController {
     public List<TaskDTO> getTasksByUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Long userId = (Long) authentication.getDetails();
-        User user = userService.findUserById(userId).get();
-        if (Objects.equals(user.getRole().toString(), "DEVELOPER")) {
+        User user = userService.findUserById(userId).orElseThrow(() -> new IllegalArgumentException("Пользователь не найден"));
+
+        // Если роль ADMIN, возвращаем задачи из всех проектов
+        if (user.getRole().toString().equals("ADMIN")) {
+            return projectService.findAllProjects() // Получаем все проекты
+                    .stream()
+                    .flatMap(project -> taskService.getTasksByProjectId(project.getId()).stream()) // Получаем задачи каждого проекта
+                    .map(taskService::convertToDTO) // Конвертируем задачи в DTO
+                    .toList();
+        }
+        // Если роль DEVELOPER, возвращаем задачи, связанные с разработчиком
+        else if (user.getRole().toString().equals("DEVELOPER")) {
             return taskService.getTasksByDeveloperId(userId)
                     .stream()
                     .map(taskService::convertToDTO)
                     .toList();
         }
-        else if (Objects.equals(user.getRole().toString(), "TESTER")) {
+        // Если роль TESTER, возвращаем задачи, связанные с тестировщиком
+        else if (user.getRole().toString().equals("TESTER")) {
             return taskService.getTasksByTesterId(userId)
                     .stream()
                     .map(taskService::convertToDTO)
                     .toList();
         }
-        return null;
+
+        // Если роль не определена, возвращаем пустой список
+        return List.of();
     }
+
 
 
     @GetMapping("/{projectId}")
@@ -124,7 +140,10 @@ public class TaskController {
 
 
     @PostMapping
-    public Task createTask(@RequestBody Task task) {
+    public Task createTask(@RequestBody TaskDTO taskDTO) {
+        System.out.println(taskDTO);
+        Task task = taskService.convertToTask(taskDTO);
+        System.out.println(taskDTO);
         return taskService.createTask(task);
     }
 

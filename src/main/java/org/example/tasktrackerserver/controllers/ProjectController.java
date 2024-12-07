@@ -7,6 +7,8 @@ import org.example.tasktrackerserver.models.Task;
 import org.example.tasktrackerserver.models.User;
 import org.example.tasktrackerserver.services.ProjectService;
 import org.example.tasktrackerserver.services.UserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,6 +31,43 @@ public class ProjectController {
 
     @Autowired
     private UserService userService;
+
+    @GetMapping("/{projectId}")
+    public ResponseEntity<?> getProjectById(@PathVariable Long projectId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Long userId = (Long) authentication.getDetails();
+
+        // Проверка существования пользователя
+        Optional<User> userOptional = userService.findUserById(userId);
+        if (userOptional.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Пользователь не авторизован или не найден.");
+        }
+
+        // Проверка существования проекта
+        Optional<Project> projectOptional = projectService.findProjectById(projectId);
+        if (projectOptional.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Проект с ID " + projectId + " не найден.");
+        }
+
+        Project project = projectOptional.get();
+
+        // Преобразование в DTO
+        ProjectDTO projectDTO = new ProjectDTO(
+                project.getId(),
+                project.getName(),
+                project.getDescription(),
+                project.getDeadline()
+        );
+
+        // Логирование
+        Logger logger = LoggerFactory.getLogger(this.getClass());
+        logger.info("Получен проект: {}", projectDTO);
+
+        return ResponseEntity.ok(projectDTO);
+    }
+
 
     @GetMapping("/project_info")
     public ResponseEntity<ProjectDTO> getProjectByUserId() {
@@ -58,6 +97,27 @@ public class ProjectController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
     }
+
+    @GetMapping("/name")
+    public ResponseEntity<Long> getProjectIdByName(@RequestParam String name) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Long userId = (Long) authentication.getDetails();
+
+        Optional<User> user = userService.findUserById(userId);
+        if (user.isPresent() && user.get().getRole() == User.Role.ADMIN) {
+            Optional<Project> projectOpt = projectService.findProjectByName(name);
+
+            if (projectOpt.isPresent()) {
+                Project project = projectOpt.get();
+                return ResponseEntity.ok(project.getId());
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);  // Если проект не найден
+            }
+        } else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);  // Для других пользователей
+        }
+    }
+
 
     @GetMapping("/{userId}/project_info")
     public ResponseEntity<ProjectDTO> getProjectByUserId(@PathVariable Long userId) {

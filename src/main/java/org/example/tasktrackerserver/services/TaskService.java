@@ -155,6 +155,7 @@ public class TaskService {
         Long testerId = task.getTester() != null ? task.getTester().getId() : null;
         return new TaskDTO(
                 task.getId(),
+                task.getProject().getId(),
                 task.getName(),
                 task.getDescription(),
                 task.getStatus().toString(),
@@ -180,6 +181,14 @@ public class TaskService {
         task.setDeadline(taskDTO.getDeadline());
         task.setEndTime(taskDTO.getEndTime());
         task.setCheckTime(taskDTO.getCheckTime());
+
+        if (taskDTO.getProjectId() != null) {
+            Optional<Project> project = projectRepository.findProjectById(taskDTO.getProjectId());
+            task.setProject(project.get());
+        } else {
+            task.setProject(null);
+            System.out.println("Проект не найден");
+        }
 
         if (taskDTO.getDeveloperId() != null) {
             Optional<User> developerOptional = userRepository.findUserById(taskDTO.getDeveloperId());

@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 @Setter
 public class TaskDTO {
     private Long id;
+    private Long projectId;
     private String name;
     private String description;
     private String status;
@@ -18,7 +19,8 @@ public class TaskDTO {
     private Long developerId;
     private Long testerId;
 
-    public TaskDTO(Long id, String name,
+    public TaskDTO(Long id, Long projectId,
+                   String name,
                    String description,
                    String status,
                    String priority,
@@ -28,6 +30,7 @@ public class TaskDTO {
                    Long developerId,
                    Long testerId) {
         this.id = id;
+        this.projectId = projectId;
         this.name = name;
         this.description = description;
         this.status = status;
@@ -43,6 +46,7 @@ public class TaskDTO {
     public String toString() {
         return "Task{" +
                 "id=" + id +
+                ", projectId='" + projectId +
                 ", name='" + name + '\'' +
                 ", description='" + description + '\'' +
                 ", status='" + status + '\'' +
